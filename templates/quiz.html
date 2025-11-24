@@ -1,0 +1,602 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{{ quiz.name }} – Prelims</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Your global styles -->
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+
+    <!-- Minimal extra styling for layout (you can move to CSS file later) -->
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+            background: radial-gradient(circle at top, #020617, #020617);
+            color: #e5e7eb;
+        }
+
+        .quiz-shell {
+            max-width: 960px;
+            margin: 16px auto;
+            padding: 12px;
+        }
+
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .badge {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            opacity: 0.85;
+        }
+
+        .question-index {
+            font-size: 14px;
+            opacity: 0.85;
+        }
+
+        .timer {
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .timer.danger {
+            color: #f97373;
+        }
+
+        .fs-warning {
+            font-size: 12px;
+            color: #f97373;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .fs-warning.visible {
+            display: block;
+        }
+
+        .quiz-main {
+            background: rgba(15, 23, 42, 0.95);
+            border-radius: 16px;
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+            padding: 16px 16px 72px;
+            /* extra bottom for footer */
+            position: relative;
+        }
+
+        .question-area {
+            min-width: 50VW;
+            max-height: calc(100vh - 220px);
+            overflow-y: auto;
+        }
+
+        .question-card {
+            display: none;
+            padding: 12px 4px;
+        }
+
+        .question-card.active {
+            display: block;
+        }
+
+        .q-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            opacity: 0.8;
+            margin-bottom: 8px;
+        }
+
+        .q-text {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .q-text p {
+            margin: 0 0 6px;
+        }
+
+        .q-image img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .option {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            background: rgba(15, 23, 42, 0.7);
+            transition: background 0.12s, border-color 0.12s;
+        }
+
+        .option:hover {
+            background: rgba(30, 64, 175, 0.3);
+            border-color: rgba(129, 140, 248, 0.7);
+        }
+
+        .option input {
+            margin-top: 4px;
+        }
+
+        .option-label strong {
+            margin-right: 4px;
+        }
+
+        .quiz-footer {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 8px 16px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            background: linear-gradient(to top, rgba(15, 23, 42, 1), rgba(15, 23, 42, 0.8), transparent);
+            border-radius: 0 0 16px 16px;
+        }
+
+        .nav-btn {
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.6);
+            background: rgba(15, 23, 42, 1);
+            color: #e5e7eb;
+            padding: 6px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .nav-btn.secondary {
+            opacity: 0.9;
+        }
+
+        .nav-btn.primary {
+            border-color: rgba(248, 250, 252, 0.9);
+            background: linear-gradient(135deg, #22c55e, #4ade80);
+            color: #020617;
+            font-weight: 600;
+        }
+
+        .nav-btn[disabled] {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .dots {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .dot-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.6);
+            background: transparent;
+            color: #e5e7eb;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .dot-btn.active {
+            background: #3b82f6;
+            border-color: #60a5fa;
+            color: white;
+            font-weight: 600;
+        }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at top, rgba(30, 64, 175, 0.96), rgba(15, 23, 42, 0.98));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+
+        .overlay-card {
+            max-width: 460px;
+            padding: 24px;
+            border-radius: 18px;
+            background: rgba(15, 23, 42, 0.96);
+            border: 1px solid rgba(191, 219, 254, 0.5);
+            box-shadow: 0 24px 50px rgba(0, 0, 0, 0.6);
+            text-align: center;
+        }
+
+        .overlay-title {
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+
+        .overlay-sub {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .overlay-btn {
+            border-radius: 999px;
+            border: none;
+            padding: 9px 20px;
+            background: linear-gradient(135deg, #3b82f6, #22c55e);
+            color: #020617;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        .fs-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.96);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 60;
+        }
+
+        .fs-overlay-content {
+            max-width: 420px;
+            padding: 24px;
+            border-radius: 16px;
+            background: #020617;
+            border: 1px solid rgba(148, 163, 184, 0.6);
+            text-align: center;
+        }
+
+        .fs-overlay.hidden {
+            display: none;
+        }
+
+
+        ::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #020617;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: #3b82f6;
+            border-radius: 20px;
+            border: 3px solid #020617;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- START OVERLAY (before quiz begins) -->
+    <div class="overlay" id="startOverlay">
+        <div class="overlay-card">
+            <div class="overlay-title">AI KSHETRA Prelims</div>
+            <p class="overlay-sub">
+                The quiz will run in fullscreen mode. Please do not switch tabs or exit fullscreen during the test.
+            </p>
+            <p class="overlay-sub">
+                When you are ready, click <strong>Start Quiz</strong> to enter fullscreen and begin the timer.
+            </p>
+            <button class="overlay-btn" id="startQuizBtn">Start Quiz</button>
+        </div>
+    </div>
+
+    <div class="quiz-shell">
+        <!-- header -->
+        <div class="quiz-header">
+            <div>
+                <div class="badge">{{ quiz.name }} · PRELIMS</div>
+                <div class="question-index" id="qIndexLabel">
+                    Question 1 of {{ questions|length }}
+                </div>
+            </div>
+            <div>
+                <div class="timer" id="timerLabel">--:--</div>
+                <div class="fs-warning" id="fsWarning">Please stay in fullscreen mode.</div>
+            </div>
+        </div>
+
+        <!-- main quiz card -->
+        <div class="quiz-main">
+            <form id="quizForm" method="post" action="{% url 'submit_quiz' quiz.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="phone" value="{{ request.GET.phone }}">
+                <input type="hidden" name="event_code" value="{{ request.GET.event }}">
+
+                <!-- Questions (one visible at a time) -->
+                <div class="question-area" id="questionArea">
+                    {% for item in questions %}
+                    {% with q=item.obj opts=item.options %}
+                    <div class="question-card{% if forloop.first %} active{% endif %}"
+                        data-index="{{ forloop.counter0 }}">
+                        <div class="q-meta">
+                            <span>Q{{ forloop.counter }}</span>
+                            <span>Marks: 1</span>
+                        </div>
+                        <div class="q-text">
+                            {{ q.text_html|safe }}
+                        </div>
+
+                        {% if q.image %}
+                        <div class="q-image">
+                            <img src="{{ q.image.url }}" alt="Question image">
+                        </div>
+                        {% endif %}
+
+                        <div class="options">
+                            {% for key, text in opts %}
+                            <label class="option">
+                                <input type="radio" name="q_{{ q.id }}" value="{{ key }}" class="option-input">
+                                <span class="option-label">
+                                    {{ text|safe }}
+                                </span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endwith %}
+                    {% endfor %}
+                </div>
+
+                <!-- footer with nav + dots -->
+                <div class="quiz-footer">
+                    <button type="button" id="prevBtn" class="nav-btn secondary">← Previous</button>
+
+                    <div class="dots" id="dotsContainer">
+                        {% for item in questions %}
+                        <button type="button" class="dot-btn{% if forloop.first %} active{% endif %}"
+                            data-index="{{ forloop.counter0 }}">
+                            {{ forloop.counter }}
+                        </button>
+                        {% endfor %}
+                    </div>
+
+                    <div class="nav-right">
+                        <button type="button" id="nextBtn" class="nav-btn">Next →</button>
+                        <button type="submit" id="submitBtn" class="nav-btn primary">Submit</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- FULLSCREEN LOCK OVERLAY -->
+    <div id="fsOverlay" class="fs-overlay hidden">
+        <div class="fs-overlay-content">
+            <h2>Fullscreen required</h2>
+            <p>
+                For fairness, this quiz can only be attempted in fullscreen mode.<br>
+                Please re-enter fullscreen to continue.
+            </p>
+            <button type="button" id="reenterFsBtn" class="nav-btn primary">
+                Re-enter fullscreen
+            </button>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        // ---------- DOM elements ----------
+        const cards = Array.from(document.querySelectorAll('.question-card'));
+        const total = cards.length;
+        let currentIndex = 0;
+
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const qIndexLabel = document.getElementById('qIndexLabel');
+        const quizForm = document.getElementById('quizForm');
+
+        const timerLabel = document.getElementById('timerLabel');
+        const fsWarning = document.getElementById('fsWarning');
+        const startOverlay = document.getElementById('startOverlay');
+        const startQuizBtn = document.getElementById('startQuizBtn');
+
+        const fsOverlay = document.getElementById('fsOverlay');
+        const reenterFsBtn = document.getElementById('reenterFsBtn');
+        const dotButtons = Array.from(document.querySelectorAll('.dot-btn'));
+
+        // ---------- state ----------
+        let timeLeft = {{ duration_seconds }};
+        let timerInterval = null;
+        let quizStarted = false;
+        let quizSubmitted = false;
+
+        // ---------- helpers ----------
+        function updateNavButtons() {
+            if (!prevBtn || !nextBtn || !qIndexLabel) return;
+            prevBtn.disabled = (currentIndex === 0);
+            nextBtn.disabled = (currentIndex === total - 1);
+            qIndexLabel.textContent = "Question " + (currentIndex + 1) + " of " + total;
+
+            dotButtons.forEach((btn, idx) => {
+                if (idx === currentIndex) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+        }
+
+        function showQuestion(index) {
+            cards.forEach(c => c.classList.remove('active'));
+            const target = cards[index];
+            if (target) {
+                target.classList.add('active');
+                currentIndex = index;
+                updateNavButtons();
+            }
+        }
+
+        function formatTime(t) {
+            const m = Math.floor(t / 60);
+            const s = t % 60;
+            return String(m).padStart(2, '0') + ":" + String(s).padStart(2, '0');
+        }
+
+        function startTimer() {
+            if (!timerLabel) return;
+            timerLabel.textContent = formatTime(timeLeft);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                if (timeLeft <= 0) {
+                    timerLabel.textContent = "00:00";
+                    timerLabel.classList.add('danger');
+                    clearInterval(timerInterval);
+                    if (!quizSubmitted) {
+                        quizSubmitted = true;
+                        quizForm.submit();
+                    }
+                    return;
+                }
+                timerLabel.textContent = formatTime(timeLeft);
+                if (timeLeft <= 60) {
+                    timerLabel.classList.add('danger');
+                }
+            }, 1000);
+        }
+
+        function enterFullscreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
+        }
+
+        function isFullscreen() {
+            return document.fullscreenElement ||
+                document.webkitFullscreenElement ||
+                document.msFullscreenElement;
+        }
+
+        function showFsOverlay(show) {
+            if (!fsOverlay) return;
+            if (show) {
+                fsOverlay.classList.remove('hidden');
+                fsOverlay.style.display = 'flex';
+            } else {
+                fsOverlay.classList.add('hidden');
+                fsOverlay.style.display = 'none';
+            }
+        }
+
+        // ---------- fullscreen lock ----------
+        function handleFullscreenChange() {
+            if (!quizStarted || quizSubmitted) {
+                if (fsWarning) fsWarning.classList.remove('visible');
+                showFsOverlay(false);
+                return;
+            }
+            if (!isFullscreen()) {
+                if (fsWarning) fsWarning.classList.add('visible');
+                showFsOverlay(true);
+            } else {
+                if (fsWarning) fsWarning.classList.remove('visible');
+                showFsOverlay(false);
+            }
+        }
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+        if (reenterFsBtn) {
+            reenterFsBtn.addEventListener('click', () => {
+                enterFullscreen();
+            });
+        }
+
+        function requireFullscreen(e) {
+            if (!quizStarted || quizSubmitted) return false;
+            if (!isFullscreen()) {
+                if (e) e.preventDefault();
+                if (fsWarning) fsWarning.classList.add('visible');
+                showFsOverlay(true);
+                return true;
+            }
+            return false;
+        }
+
+        // ---------- navigation ----------
+        if (prevBtn) {
+            prevBtn.addEventListener('click', (e) => {
+                if (requireFullscreen(e)) return;
+                if (currentIndex > 0) showQuestion(currentIndex - 1);
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', (e) => {
+                if (requireFullscreen(e)) return;
+                if (currentIndex < total - 1) showQuestion(currentIndex + 1);
+            });
+        }
+
+        dotButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (requireFullscreen(e)) return;
+                const idx = parseInt(btn.getAttribute('data-index'), 10);
+                if (!isNaN(idx)) {
+                    showQuestion(idx);
+                }
+            });
+        });
+
+        // ---------- form submit ----------
+        if (quizForm) {
+            quizForm.addEventListener('submit', function (e) {
+                if (quizSubmitted) return;
+                if (requireFullscreen(e)) return;
+
+                const ok = confirm("Are you sure you want to submit? You cannot change answers after this.");
+                if (!ok) {
+                    e.preventDefault();
+                } else {
+                    quizSubmitted = true;
+                }
+            });
+        }
+
+        // ---------- start quiz ----------
+        if (startQuizBtn) {
+            startQuizBtn.addEventListener('click', () => {
+                if (startOverlay) startOverlay.style.display = 'none';
+                enterFullscreen();
+                quizStarted = true;
+                showQuestion(0);
+                updateNavButtons();
+                startTimer();
+                handleFullscreenChange();
+            });
+        }
+
+        // Hide questions until start
+        cards.forEach(c => c.classList.remove('active'));
+    })();
+</script>
+
+</body>
+
+</html>

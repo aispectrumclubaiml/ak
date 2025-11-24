@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ quiz.name }} – Result</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            background: radial-gradient(circle at top, #020617, #020617);
+            color: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .card {
+            background: rgba(15,23,42,0.95);
+            padding: 24px;
+            border-radius: 16px;
+            border: 1px solid rgba(148,163,184,0.5);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            max-width: 420px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+        .score {
+            font-size: 20px;
+            margin: 12px 0;
+        }
+        .note {
+            font-size: 13px;
+            opacity: 0.85;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>{{ quiz.name }} – Submitted</h1>
+    {% if score is not None %}
+        <p class="score">
+            Your score: <strong>{{ score }}</strong> / {{ total }}
+        </p>
+    {% else %}
+        <p>Your responses have been recorded.</p>
+    {% endif %}
+    <p class="note">
+        You may now inform the invigilator. If there is any issue with your submission,
+        please contact the event coordinator.
+    </p>
+</div>
+</body>
+</html>

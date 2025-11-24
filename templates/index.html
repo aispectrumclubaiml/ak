@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>AI KSHETRA Prelims | Event Registration</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Futuristic font -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+<div class="grid-overlay"></div>
+<div class="orb"></div>
+
+<div class="container">
+    <div class="glass-card">
+        <div class="badge">
+            <div class="badge-dot"></div>
+            AI KSHETRA 2025 · PRELIMS
+        </div>
+
+        <div class="title-row">
+            <div class="title-main">
+                Choose Your <span>Battlefield</span>
+            </div>
+            <p class="subtitle">
+                Welcome to the prelims hub of <strong>AI KSHETRA</strong>. Pick your event
+                and enter the <strong>team leader’s phone number</strong> to proceed.
+            </p>
+        </div>
+
+        <div class="steps">
+            STEP 1 · EVENT & PHONE
+            <div class="steps-line"></div>
+        </div>
+
+        <!-- Form -->
+        <form id="prelims-form" method="post" action="">
+            <!-- {% csrf_token %} -->
+
+            <!-- Events -->
+            <div class="event-grid" id="event-grid">
+                <!-- Event 1 -->
+                <label class="event-card" data-event-id="event1">
+                    <input class="event-radio" type="radio" name="event" value="EVENT_1" />
+                    <div class="event-pill">
+                        <div class="event-pill-inner"></div>
+                    </div>
+                    <div>
+                        <div class="event-content-title">Build With AI</div>
+                        <div class="event-content-sub">
+                            Algorithmic quiz + AI basics. Rapid-fire rounds that test how fast your brain can think in vectors.
+                        </div>
+                    </div>
+                </label>
+
+                <!-- Event 2 -->
+                <label class="event-card" data-event-id="event2">
+                    <input class="event-radio" type="radio" name="event" value="EVENT_2" />
+                    <div class="event-pill">
+                        <div class="event-pill-inner"></div>
+                    </div>
+                    <div>
+                        <div class="event-content-title">CODEWARZ</div>
+                        <div class="event-content-sub">
+                            ML & computer vision themed prelims. Decode patterns, predict outcomes, and outsmart the system.
+                        </div>
+                    </div>
+                </label>
+            </div>
+
+            <!-- Phone section -->
+            <div class="phone-section" id="phone-section">
+                <div class="field-label">
+                    Team Leader Phone
+                    <span>(Given at the time of Registration)</span>
+                </div>
+                <div class="input-wrap">
+                    <div class="input-prefix">+91</div>
+                    <input
+                        type="tel"
+                        id="phone"
+                        name="phone"
+                        class="input"
+                        maxlength="10"
+                        placeholder="Enter 10-digit mobile number"
+                        inputmode="numeric"
+                        autocomplete="tel"
+                    />
+                </div>
+                <div class="error-text" id="error-text"></div>
+            </div>
+
+            <div class="bottom-row">
+                <p class="note-text">
+                    <strong>Note:</strong> One submission per team. Use the same phone number
+                    for all future communication.
+                </p>
+                <button type="submit" class="btn-primary">
+                    <span>Proceed to Prelims</span>
+                    <span class="icon">⟶</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="toast" id="toast">
+    <div class="toast-dot"></div>
+    <span id="toast-text">Please select an event to continue.</span>
+</div>
+
+<script>
+    (function () {
+        const eventCards = document.querySelectorAll(".event-card");
+        const phoneSection = document.getElementById("phone-section");
+        const phoneInput = document.getElementById("phone");
+        const errorText = document.getElementById("error-text");
+        const form = document.getElementById("prelims-form");
+        const toast = document.getElementById("toast");
+        const toastText = document.getElementById("toast-text");
+
+        const VALIDATION_URL = "https://your-college-site.com/ai-kshetra/validate_prelims.php";
+
+        let selectedEvent = null;
+
+        function showToast(message) {
+            toastText.textContent = message;
+            toast.classList.add("visible");
+            setTimeout(() => {
+                toast.classList.remove("visible");
+            }, 2500);
+        }
+
+        function validatePhone(phone) {
+            const digitsOnly = phone.replace(/\D/g, "");
+            return digitsOnly.length === 10 && /^([6-9]\d{9})$/.test(digitsOnly);
+        }
+
+        eventCards.forEach(card => {
+            card.addEventListener("click", () => {
+                eventCards.forEach(c => c.classList.remove("selected"));
+                card.classList.add("selected");
+
+                const radio = card.querySelector(".event-radio");
+                radio.checked = true;
+                selectedEvent = radio.value;
+
+                if (!phoneSection.classList.contains("visible")) {
+                    phoneSection.classList.add("visible");
+                }
+
+                if (!phoneInput.value.trim()) {
+                    setTimeout(() => phoneInput.focus(), 150);
+                }
+            });
+        });
+
+        phoneInput.addEventListener("input", () => {
+            phoneInput.value = phoneInput.value.replace(/\D/g, "").slice(0, 10);
+            errorText.classList.remove("visible");
+        });
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();  // 🔴 IMPORTANT: don’t do normal form submit
+            errorText.classList.remove("visible");
+
+            if (!selectedEvent) {
+                showToast("Please select an event to continue.");
+                return;
+            }
+
+            const phone = phoneInput.value.trim();
+            if (!validatePhone(phone)) {
+                errorText.textContent = "Enter a valid 10-digit Indian mobile number starting with 6-9.";
+                errorText.classList.add("visible");
+                phoneInput.focus();
+                return;
+            }
+
+            showToast("Validating your registration...");
+
+            try {
+                const formData = new FormData();
+                formData.append("phone", phone);
+                formData.append("event_code", selectedEvent);
+
+                const res = await fetch(VALIDATION_URL, {
+                    method: "POST",
+                    body: formData,
+                });
+
+                if (!res.ok) {
+                    showToast("Server error. Please contact coordinator.");
+                    return;
+                }
+
+                const data = await res.json();
+
+                if (data.status === "ok") {
+                    // ✅ Registration found → show confirmation + rules
+                    showConfirmationStep(data, phone, selectedEvent);
+                } else {
+                    // ❌ Not found or invalid
+                    errorText.textContent = data.message || "No registration found for this phone & event.";
+                    errorText.classList.add("visible");
+                }
+            } catch (err) {
+                console.error(err);
+                showToast("Network error. Please try again or contact coordinator.");
+            }
+        });
+
+        // Dynamically build Step 2 (team + rules) in the same page
+        function showConfirmationStep(data, phone, eventCode) {
+            const card = document.querySelector(".glass-card");
+            card.innerHTML = `
+                <div class="badge">
+                    <div class="badge-dot"></div>
+                    AI KSHETRA 2025 · PRELIMS
+                </div>
+
+                <div class="title-row">
+                    <div class="title-main">
+                        Confirm Your <span>Squad</span>
+                    </div>
+                    <p class="subtitle">
+                        We found your registration. Please verify your team details and read the rules carefully before starting the prelims.
+                    </p>
+                </div>
+
+                <div class="confirm-block">
+                    <h3>Team Details</h3>
+                    <p><strong>Team Name:</strong> ${data.team_name}</p>
+                    <p><strong>Event:</strong> ${data.event_display || eventCode}</p>
+                    <p><strong>Registered Phone:</strong> +91 ${phone}</p>
+                    ${data.members && data.members.length ? `
+                        <p><strong>Team Members:</strong></p>
+                        <ul>
+                            ${data.members.map(m => `<li>${m}</li>`).join("")}
+                        </ul>
+                    ` : ""}
+                </div>
+
+                <div class="rules-block">
+                    <h3>Rules & Guidelines</h3>
+                    <ul class="rules-list">
+                        <li>Only the registered team leader should operate the system during prelims.</li>
+                        <li>Do not refresh or go back during the quiz once started.</li>
+                        <li>Any malpractice or multiple logins may lead to disqualification.</li>
+                        <li>Time will start as soon as you enter the prelims environment.</li>
+                    </ul>
+                </div>
+
+                <div class="bottom-row">
+                    <p class="note-text">
+                        By clicking <strong>Start Prelims</strong>, you confirm that the above details are correct and you agree to the rules.
+                    </p>
+                    <button class="btn-primary" id="start-prelims-btn">
+                        <span>Start Prelims</span>
+                        <span class="icon">⟶</span>
+                    </button>
+                </div>
+            `;
+
+            // Attach click handler to go to your quiz server (Django) with query params
+            document.getElementById("start-prelims-btn").addEventListener("click", () => {
+                const params = new URLSearchParams({
+                    phone: phone,
+                    event: eventCode,
+                    token: data.token || ""  // optional, if PHP returns some token
+                });
+                window.location.href = "http://YOUR-DJANGO-SERVER-IP:8000/prelims/?" + params.toString();
+            });
+        }
+    })();
+</script>
+
+</body>
+</html>
