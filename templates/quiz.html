@@ -9,6 +9,7 @@
 
     <!-- Your global styles -->
     <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <link rel="shortcut icon" href="{% static 'fav.png' %}" type="image/x-icon">
 
     <!-- Minimal extra styling for layout (you can move to CSS file later) -->
     <style>
@@ -324,7 +325,7 @@
             <form id="quizForm" method="post" action="{% url 'submit_quiz' quiz.id %}">
                 {% csrf_token %}
                 <input type="hidden" name="phone" value="{{ request.GET.phone }}">
-                <input type="hidden" name="event_code" value="{{ request.GET.event }}">
+                <input type="hidden" name="event" value="{{ request.GET.event }}">
 
                 <!-- Questions (one visible at a time) -->
                 <div class="question-area" id="questionArea">

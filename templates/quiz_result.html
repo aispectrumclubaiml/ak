@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>{{ quiz.name }} – Result</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="{% static 'fav.png' %}" type="image/x-icon">
     <style>
         body {
             margin: 0;
@@ -15,43 +17,64 @@
             justify-content: center;
             min-height: 100vh;
         }
+
         .card {
-            background: rgba(15,23,42,0.95);
+            background: rgba(15, 23, 42, 0.95);
             padding: 24px;
             border-radius: 16px;
-            border: 1px solid rgba(148,163,184,0.5);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            border: 1px solid rgba(148, 163, 184, 0.5);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
             max-width: 420px;
             text-align: center;
         }
+
         h1 {
             font-size: 22px;
             margin-bottom: 8px;
         }
+
         .score {
             font-size: 20px;
             margin: 12px 0;
         }
+
         .note {
             font-size: 13px;
             opacity: 0.85;
         }
     </style>
 </head>
+
 <body>
-<div class="card">
-    <h1>{{ quiz.name }} – Submitted</h1>
-    {% if score is not None %}
+    <div class="card">
+        <h1>{{ quiz.name }} – Submitted</h1>
+        {% if score is not None %}
         <p class="score">
             Your score: <strong>{{ score }}</strong> / {{ total }}
         </p>
-    {% else %}
+        {% else %}
         <p>Your responses have been recorded.</p>
-    {% endif %}
-    <p class="note">
-        You may now inform the invigilator. If there is any issue with your submission,
-        please contact the event coordinator.
-    </p>
-</div>
+        {% endif %}
+        <p class="note">
+            You may now inform the invigilator. If there is any issue with your submission,
+            please contact the event coordinator.
+        </p>
+        {% if details %}
+        <hr style="margin:16px 0; border-color: rgba(148,163,184,0.4);">
+        <div style="text-align:left; font-size:13px; max-height:260px; overflow:auto;">
+            <p><strong>Debug: Answer Breakdown</strong></p>
+            {% for d in details %}
+            <div style="margin-bottom:8px;">
+                <div><strong>Q{{ forloop.counter }} (ID {{ d.question.id }}):</strong></div>
+                <div>Selected: {{ d.selected_letter }} — {{ d.selected_text|default:"(no answer)" }}</div>
+                <div>Correct: {{ d.correct_letter }} — {{ d.correct_text }}</div>
+                <div>Is correct? <strong>{{ d.is_correct }}</strong></div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+    </div>
 </body>
+
 </html>
