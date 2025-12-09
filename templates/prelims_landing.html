@@ -27,8 +27,6 @@
                 AI KSHETRA 2025 · PRELIMS
             </div>
 
-
-
             {% if step == 1 %}
             {# ---------------- STEP 1: EVENT + PHONE FORM ---------------- #}
             <div class="title-row">
@@ -50,41 +48,31 @@
                 {% csrf_token %}
 
                 <div class="event-grid" id="event-grid">
-                    <!-- Event 1 -->
-                    <label class="event-card" data-event-id="event1">
-                        <input class="event-radio" type="radio" name="event" value="3" />
+                    {% for quiz in quizzes %}
+                    <label class="event-card" data-event-id="quiz-{{ quiz.id }}">
+                        <!-- Use quiz.id as the value -->
+                        <input class="event-radio" type="radio" name="event" value="{{ quiz.id }}" />
                         <div class="event-pill">
                             <div class="event-pill-inner"></div>
                         </div>
                         <div>
-                            <div class="event-content-title">Build With AI</div>
+                            <div class="event-content-title">{{ quiz.name }}</div>
                             <div class="event-content-sub">
-                                Algorithmic quiz + AI basics. Rapid-fire rounds that test how fast your brain can think
-                                in vectors.
+                                {{ quiz.description|default:"No description available." }}
                             </div>
                         </div>
                     </label>
-
-                    <!-- Event 2 -->
-                    <label class="event-card" data-event-id="event2">
-                        <input class="event-radio" type="radio" name="event" value="4" />
-                        <div class="event-pill">
-                            <div class="event-pill-inner"></div>
-                        </div>
-                        <div>
-                            <div class="event-content-title">CODEWARZ</div>
-                            <div class="event-content-sub">
-                                ML & computer vision themed prelims. Decode patterns, predict outcomes, and outsmart the
-                                system.
-                            </div>
-                        </div>
-                    </label>
+                    {% empty %}
+                    <div style="grid-column: 1/-1; text-align: center; opacity: 0.7;">
+                        No active quizzes found. Please contact admin.
+                    </div>
+                    {% endfor %}
                 </div>
 
                 <!-- Phone section -->
                 <div class="phone-section visible" id="phone-section">
                     <div class="field-label">
-                        Team Leader Phone
+                        Participant Phone
                         <span>(Given at the time of Registration)</span>
                     </div>
                     <div class="input-wrap">
@@ -108,6 +96,7 @@
                     </button>
                 </div>
             </form>
+
             {% else %}
             {# ---------------- STEP 2: CONFIRMATION + RULES ---------------- #}
             <div class="title-row">
@@ -115,7 +104,7 @@
                     Confirm Your <span>Squad</span>
                 </div>
                 <p class="subtitle">
-                    We found your registration (temporary dummy validation). Please verify details
+                    We fetched your registration details from the college server. Please verify them
                     and read the rules before starting the prelims.
                 </p>
             </div>
@@ -126,19 +115,18 @@
             </div>
 
             <div class="confirm-block">
-                <h3>Team Details</h3>
-                <p><strong>Team Name:</strong> {{ team.team_name }}</p>
-                <p><strong>Event:</strong> {{ team.event_display }}</p>
-                <p><strong>Registered Phone:</strong> +91 {{ phone }}</p>
+                <h3>Participant Details</h3>
 
-                {% if team.members %}
-                <p><strong>Team Members:</strong></p>
-                <ul>
-                    {% for m in team.members %}
-                    <li>{{ m }}</li>
-                    {% endfor %}
-                </ul>
+                {% if api_error %}
+                <p style="color:#f97373; font-size:13px; margin-bottom:8px;">
+                    {{ api_error }}
+                </p>
                 {% endif %}
+
+                <p><strong>Event:</strong> {{ team.event_display }}</p>
+                <p><strong>Participant Name:</strong> {{ team.participant_name }}</p>
+                <p><strong>Institution:</strong> {{ team.institution }}</p>
+                <p><strong>Registered Phone:</strong> +91 {{ phone }}</p>
             </div>
 
             <div class="rules-block">
@@ -235,21 +223,19 @@
                     const startBtn = document.getElementById("start-prelims-btn");
                     if (startBtn) {
                         startBtn.addEventListener("click", () => {
-                            // TODO: change URL to your actual quiz route
-                            // Example: /quiz/1/?phone=...
                             const phone = "{{ phone }}";
-                            const eventCode = "{{ event_code }}";  // "3" or "2" – also quiz id
+                            const eventCode = "{{ event_code }}";  // "3" or "4" – also quiz id
                             const params = new URLSearchParams({ phone: phone, event: eventCode });
 
                             // use selected event as quiz id
                             window.location.href = "/quiz/" + encodeURIComponent(eventCode) + "/?" + params.toString();
-
                         });
                     }
                     {% endif %}
                 })();
             </script>
-
+        </div>
+    </div>
 </body>
 
 </html>

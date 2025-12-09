@@ -4,6 +4,7 @@ import random
 from django.shortcuts import render, get_object_or_404
 from .models import Quiz, Question, Submission, Answer
 from django.views.decorators.http import require_POST
+import requests
 
 
 # Create your views here.
@@ -23,16 +24,20 @@ EVENT_CONFIG = {
 
 def prelims_entry(request):
     if request.method == "POST":
-        event_code = request.POST.get("event")  # "3" or "2"
+        quiz_id = request.POST.get("event")
         phone = request.POST.get("phone", "").strip()
 
-        if not event_code or not phone:
+        # Fetch All Quizzes for context in case of error
+        all_quizzes = Quiz.objects.all()
+
+        if not quiz_id or not phone:
             return render(
                 request,
                 "prelims_landing.html",
                 {
                     "step": 1,
                     "error": "Please select an event and enter phone number.",
+                    "quizzes": all_quizzes,
                 },
             )
 
@@ -45,17 +50,87 @@ def prelims_entry(request):
                 {
                     "step": 1,
                     "error": "Enter a valid 10-digit Indian mobile number starting with 6–9.",
+                    "quizzes": all_quizzes,
                 },
             )
 
-        # Look up event display name from the selected code
-        event_info = EVENT_CONFIG.get(event_code)
-        event_name = event_info["name"] if event_info else f"Event {event_code}"
+        # Look up event/quiz from DB
+        try:
+            quiz_obj = Quiz.objects.get(id=quiz_id)
+            event_name = quiz_obj.name
+        except (Quiz.DoesNotExist, ValueError):
+             return render(
+                request,
+                "prelims_landing.html",
+                {
+                    "step": 1,
+                    "error": "Invalid event selected.",
+                    "quizzes": all_quizzes,
+                },
+            )
 
+        # Check for existing submission
+        if Submission.objects.filter(quiz=quiz_obj, phone=phone).exists():
+             return render(
+                request,
+                "prelims_landing.html",
+                {
+                    "step": 1,
+                    "error": "You have already attempted this quiz. Multiple attempts are not allowed.",
+                    "quizzes": all_quizzes,
+                },
+            )
+
+        # ---------- CALL COLLEGE PHP SERVER ----------
+        leader_name = None
+        institution = None
+        api_error = None
+
+        try:
+            # 🔴 Real PHP endpoint
+            php_api_url = "https://rvrjcce.ac.in/xcsm/aikshetra2K25/api/get_participant.php"
+
+            # 🔴 Payload as requested
+            api_combos = {'Build With AI':'Build with AI', 'CodeWarz':'CodeWarz'}
+            payload = {
+                "mobile_number": phone,  # Key from user's sample
+                "event_name": api_combos[event_name],
+            }
+
+            
+            print(f"--- Calling API: {php_api_url}")
+            print(f"--- Payload: {payload}")
+
+            # Using json=payload because user input example looked like JSON
+            resp = requests.post(php_api_url, json=payload, timeout=5)
+            
+            print(f"--- Response Status: {resp.status_code}")
+            print(f"--- Response Text: {resp.text}")
+            
+            resp.raise_for_status()
+
+            # Expected JSON: { "success": true, "name": "...", "college": "..." }
+            data = resp.json()
+
+            if not data.get("success"):
+                api_error = data.get("message") or "Unable to verify registration from server."
+            else:
+                leader_name = data.get("name")
+                institution = data.get("college")
+
+                if not leader_name or not institution:
+                    api_error = "Could not fetch complete details from server."
+        except Exception as e:
+            print(f"--- API Error: {e}")
+            # api_error = "Could not contact college server. Please inform the coordinator."
+            pass
+
+        # Build team data (fallback if API fails)
+        # Build participant data (fallback if API fails)
         team_data = {
-            "team_name": f"Team-{phone[-4:]}",
+            "participant_name": leader_name or "Unknown Participant",
             "event_display": event_name,
-            "members": [],
+            "institution": institution or "Unknown Institution",
         }
 
         return render(
@@ -64,18 +139,23 @@ def prelims_entry(request):
             {
                 "step": 2,
                 "phone": phone,
-                "event_code": event_code,  # this is also the quiz_id
+                "event_code": quiz_id,  # using quiz.id
                 "team": team_data,
+                "api_error": api_error,
             },
         )
 
+    # GET → show step 1 with dynamic quizzes
+    quizzes = Quiz.objects.all()
     return render(
         request,
         "prelims_landing.html",
         {
             "step": 1,
+            "quizzes": quizzes,
         },
     )
+
 
 
 def quiz_page(request, quiz_id):
@@ -176,6 +256,12 @@ def submit_quiz(request, quiz_id):
             }
         )
 
+    time_taken = request.POST.get("time_taken", 0)
+    try:
+        time_taken = int(float(time_taken or 0))
+    except (ValueError, TypeError):
+        time_taken = 0
+
     # Save submission in DB
     submission = Submission.objects.create(
         quiz=quiz,
@@ -183,6 +269,7 @@ def submit_quiz(request, quiz_id):
         event=event or "",
         score=score,
         total_questions=total,
+        time_taken_seconds=time_taken,
     )
 
     # Save each answer
@@ -206,5 +293,41 @@ def submit_quiz(request, quiz_id):
         "total": total,
         "details": details,
         "submission": submission,
+        "submission_id": submission.id,
     }
     return render(request, "quiz_result.html", context)
+
+
+def submit_feedback(request):
+    if request.method == "POST":
+        submission_id = request.POST.get("submission_id")
+        rating = request.POST.get("rating")
+        rating_ui = request.POST.get("rating_ui")
+        rating_difficulty = request.POST.get("rating_difficulty")
+        rating_relevance = request.POST.get("rating_relevance")
+        comments = request.POST.get("comments", "")
+
+        submission = get_object_or_404(Submission, id=submission_id)
+        
+        from .models import Feedback
+        
+        try:
+            Feedback.objects.create(
+                submission=submission,
+                rating=rating,
+                rating_ui=rating_ui or 0,
+                rating_difficulty=rating_difficulty or 0,
+                rating_relevance=rating_relevance or 0,
+                comments=comments
+            )
+        except Exception:
+            # Maybe already exists
+            pass
+            
+        return render(request, "quiz_result.html", {
+            "quiz": submission.quiz,
+            "score": submission.score,
+            "total": submission.total_questions,
+            "feedback_submitted": True
+        })
+    return HttpResponse("Invalid request")

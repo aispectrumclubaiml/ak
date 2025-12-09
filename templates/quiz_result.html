@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -59,6 +60,77 @@
             You may now inform the invigilator. If there is any issue with your submission,
             please contact the event coordinator.
         </p>
+
+        {% if not feedback_submitted and submission_id %}
+        <hr style="margin:20px 0; border-color: rgba(148,163,184,0.4);">
+        <div class="feedback-section">
+            <h3 style="font-size:18px; margin-bottom:12px;">Feedback</h3>
+            <form action="{% url 'submit_feedback' %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="submission_id" value="{{ submission_id }}">
+
+                <!-- 1. Overall Experience -->
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; margin-bottom:6px; font-size:14px;">Overall Experience (1-5)</label>
+                    <div style="display:flex; justify-content:center; gap:8px;">
+                        {% for i in "12345" %}
+                        <label><input type="radio" name="rating" value="{{ i }}" required> {{ i }}</label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- 2. UI/UX -->
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; margin-bottom:6px; font-size:14px;">Platform UI/UX (1-5)</label>
+                    <div style="display:flex; justify-content:center; gap:8px;">
+                        {% for i in "12345" %}
+                        <label><input type="radio" name="rating_ui" value="{{ i }}" required> {{ i }}</label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- 3. Question Difficulty -->
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; margin-bottom:6px; font-size:14px;">Question Difficulty (1-5)</label>
+                    <div style="display:flex; justify-content:center; gap:8px;">
+                        {% for i in "12345" %}
+                        <label><input type="radio" name="rating_difficulty" value="{{ i }}" required> {{ i }}</label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- 4. Question Relevance -->
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; margin-bottom:6px; font-size:14px;">Question Relevance (1-5)</label>
+                    <div style="display:flex; justify-content:center; gap:8px;">
+                        {% for i in "12345" %}
+                        <label><input type="radio" name="rating_relevance" value="{{ i }}" required> {{ i }}</label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div style="margin-bottom:12px;">
+                    <textarea name="comments" rows="3" placeholder="Any comments or suggestions?"
+                        style="width:100%; padding:8px; border-radius:8px; background:rgba(2,6,23,0.5); border:1px solid rgba(148,163,184,0.4); color:white; font-family:inherit; box-sizing:border-box;"></textarea>
+                </div>
+
+                <button type="submit"
+                    style="padding:8px 16px; background:#3b82f6; color:white; border:none; border-radius:99px; cursor:pointer; font-weight:600;">
+                    Submit Feedback
+                </button>
+            </form>
+        </div>
+        {% elif feedback_submitted %}
+        <div
+            style="margin-top:20px; padding:12px; background:rgba(34,197,94,0.2); border-radius:12px; border:1px solid rgba(34,197,94,0.5);">
+            Thank you for your feedback!
+            <div style="margin-top:12px;">
+                <a href="{% url 'prelims_entry' %}"
+                    style="display:inline-block; padding:8px 16px; background:#3b82f6; color:white; text-decoration:none; border-radius:99px; font-weight:600; font-size:14px;">Back
+                    to Home</a>
+            </div>
+        </div>
+        {% endif %}
         {% if details %}
         <hr style="margin:16px 0; border-color: rgba(148,163,184,0.4);">
         <div style="text-align:left; font-size:13px; max-height:260px; overflow:auto;">

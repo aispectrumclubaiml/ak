@@ -6,6 +6,7 @@ class Quiz(models.Model):
     name = models.CharField(max_length=100)
     duration_minutes = models.IntegerField(default=30)
     num_questions = models.IntegerField(default=20)
+    description = models.TextField(blank=True, help_text="Short description shown on landing page")
 
     def __str__(self):
         return self.name
@@ -37,6 +38,7 @@ class Submission(models.Model):
 
     score = models.IntegerField()
     total_questions = models.IntegerField()
+    time_taken_seconds = models.IntegerField(default=0)
     submitted_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -56,3 +58,16 @@ class Answer(models.Model):
 
     def __str__(self):
         return f"Submission {self.submission_id} – Q{self.question_id}"
+
+
+class Feedback(models.Model):
+    submission = models.OneToOneField(Submission, on_delete=models.CASCADE, related_name="feedback")
+    rating = models.IntegerField(help_text="Overall Experience (1-5)")
+    rating_ui = models.IntegerField(default=0, help_text="UI/UX (1-5)")
+    rating_difficulty = models.IntegerField(default=0, help_text="Difficulty (1-5)")
+    rating_relevance = models.IntegerField(default=0, help_text="Relevance (1-5)")
+    comments = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Feedback for {self.submission}"

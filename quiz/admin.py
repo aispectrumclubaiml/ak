@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Quiz, Question, Submission, Answer
+from .models import Quiz, Question, Submission, Answer, Feedback
 from django.utils.html import strip_tags
 
 
@@ -98,7 +98,7 @@ class QuestionAdmin(admin.ModelAdmin):
 
 @admin.register(Submission)
 class SubmissionAdmin(admin.ModelAdmin):
-    list_display = ("id", "quiz", "phone", "event", "score", "total_questions", "submitted_at")
+    list_display = ("id", "quiz", "phone", "event", "score", "total_questions", "time_taken_seconds", "submitted_at")
     list_filter = ("quiz", "event")
     search_fields = ("phone",)
     actions = ["export_as_csv"]
@@ -116,6 +116,7 @@ class SubmissionAdmin(admin.ModelAdmin):
             "Event",
             "Score",
             "Total Questions",
+            "Time Taken (s)",
             "Submitted At",
         ])
 
@@ -128,6 +129,7 @@ class SubmissionAdmin(admin.ModelAdmin):
                 s.event,
                 s.score,
                 s.total_questions,
+                s.time_taken_seconds,
                 s.submitted_at,
             ])
 
@@ -178,3 +180,46 @@ class AnswerAdmin(admin.ModelAdmin):
         return response
 
     export_as_csv.short_description = "Download selected answers as CSV"
+
+
+@admin.register(Feedback)
+class FeedbackAdmin(admin.ModelAdmin):
+    list_display = ("id", "submission", "rating", "rating_ui", "rating_difficulty", "rating_relevance", "created_at")
+    list_filter = ("rating", "rating_ui", "rating_difficulty", "rating_relevance", "created_at")
+    search_fields = ("submission__phone", "comments")
+    actions = ["export_as_csv"]
+
+    def export_as_csv(self, request, queryset):
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="feedback.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            "ID",
+            "Submission ID",
+            "Phone",
+            "Event",
+            "Overall Rating",
+            "UI/UX Rating",
+            "Difficulty Rating",
+            "Relevance Rating",
+            "Comments",
+            "Created At"
+        ])
+
+        for f in queryset.select_related("submission"):
+            writer.writerow([
+                f.id,
+                f.submission.id,
+                f.submission.phone,
+                f.submission.event,
+                f.rating,
+                f.rating_ui,
+                f.rating_difficulty,
+                f.rating_relevance,
+                f.comments,
+                f.created_at,
+            ])
+        return response
+
+    export_as_csv.short_description = "Download selected feedback as CSV"

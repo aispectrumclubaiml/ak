@@ -326,6 +326,7 @@
                 {% csrf_token %}
                 <input type="hidden" name="phone" value="{{ request.GET.phone }}">
                 <input type="hidden" name="event" value="{{ request.GET.event }}">
+                <input type="hidden" name="time_taken" id="timeTakenInput" value="0">
 
                 <!-- Questions (one visible at a time) -->
                 <div class="question-area" id="questionArea">
@@ -399,204 +400,233 @@
     </div>
 
     <script>
-    (function () {
-        // ---------- DOM elements ----------
-        const cards = Array.from(document.querySelectorAll('.question-card'));
-        const total = cards.length;
-        let currentIndex = 0;
+        (function () {
+            console.log("Quiz script loaded");
 
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
-        const submitBtn = document.getElementById('submitBtn');
-        const qIndexLabel = document.getElementById('qIndexLabel');
-        const quizForm = document.getElementById('quizForm');
+            // ---------- DOM elements ----------
+            const cards = Array.from(document.querySelectorAll('.question-card'));
+            const total = cards.length;
+            let currentIndex = 0;
 
-        const timerLabel = document.getElementById('timerLabel');
-        const fsWarning = document.getElementById('fsWarning');
-        const startOverlay = document.getElementById('startOverlay');
-        const startQuizBtn = document.getElementById('startQuizBtn');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const submitBtn = document.getElementById('submitBtn');
+            const qIndexLabel = document.getElementById('qIndexLabel');
+            const quizForm = document.getElementById('quizForm');
+            const timeTakenInput = document.getElementById('timeTakenInput');
 
-        const fsOverlay = document.getElementById('fsOverlay');
-        const reenterFsBtn = document.getElementById('reenterFsBtn');
-        const dotButtons = Array.from(document.querySelectorAll('.dot-btn'));
+            const timerLabel = document.getElementById('timerLabel');
+            const fsWarning = document.getElementById('fsWarning');
+            const startOverlay = document.getElementById('startOverlay');
+            const startQuizBtn = document.getElementById('startQuizBtn');
 
-        // ---------- state ----------
-        let timeLeft = {{ duration_seconds }};
-        let timerInterval = null;
-        let quizStarted = false;
-        let quizSubmitted = false;
+            const fsOverlay = document.getElementById('fsOverlay');
+            const reenterFsBtn = document.getElementById('reenterFsBtn');
+            const dotButtons = Array.from(document.querySelectorAll('.dot-btn'));
 
-        // ---------- helpers ----------
-        function updateNavButtons() {
-            if (!prevBtn || !nextBtn || !qIndexLabel) return;
-            prevBtn.disabled = (currentIndex === 0);
-            nextBtn.disabled = (currentIndex === total - 1);
-            qIndexLabel.textContent = "Question " + (currentIndex + 1) + " of " + total;
+            // ---------- state ----------
+            // Use default of 1800 if context variable is missing to avoid syntax error
+            // Using Number() wrapper for safety, though direct output is an integer
+            const initialDuration = Number("{{ duration_seconds|default:1800 }}");
+            console.log("Initial Duration:", initialDuration);
 
-            dotButtons.forEach((btn, idx) => {
-                if (idx === currentIndex) btn.classList.add('active');
-                else btn.classList.remove('active');
-            });
-        }
+            let timeLeft = initialDuration;
+            let timerInterval = null;
+            let quizStarted = false;
+            let quizSubmitted = false;
 
-        function showQuestion(index) {
-            cards.forEach(c => c.classList.remove('active'));
-            const target = cards[index];
-            if (target) {
-                target.classList.add('active');
-                currentIndex = index;
-                updateNavButtons();
+            // ---------- helpers ----------
+            function updateTimeTaken() {
+                if (timeTakenInput) {
+                    const taken = initialDuration - timeLeft;
+                    console.log("Time Taken:", taken);
+                    timeTakenInput.value = taken > 0 ? taken : 0;
+                }
             }
-        }
 
-        function formatTime(t) {
-            const m = Math.floor(t / 60);
-            const s = t % 60;
-            return String(m).padStart(2, '0') + ":" + String(s).padStart(2, '0');
-        }
+            function updateNavButtons() {
+                if (!prevBtn || !nextBtn || !qIndexLabel) return;
+                prevBtn.disabled = (currentIndex === 0);
+                nextBtn.disabled = (currentIndex === total - 1);
+                qIndexLabel.textContent = "Question " + (currentIndex + 1) + " of " + total;
 
-        function startTimer() {
-            if (!timerLabel) return;
-            timerLabel.textContent = formatTime(timeLeft);
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                if (timeLeft <= 0) {
-                    timerLabel.textContent = "00:00";
-                    timerLabel.classList.add('danger');
-                    clearInterval(timerInterval);
-                    if (!quizSubmitted) {
-                        quizSubmitted = true;
-                        quizForm.submit();
+                dotButtons.forEach((btn, idx) => {
+                    if (idx === currentIndex) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                });
+            }
+
+            function showQuestion(index) {
+                cards.forEach(c => c.classList.remove('active'));
+                const target = cards[index];
+                if (target) {
+                    target.classList.add('active');
+                    currentIndex = index;
+                    updateNavButtons();
+                }
+            }
+
+            function formatTime(t) {
+                const m = Math.floor(t / 60);
+                const s = t % 60;
+                return String(m).padStart(2, '0') + ":" + String(s).padStart(2, '0');
+            }
+
+            function startTimer() {
+                if (!timerLabel) return;
+                timerLabel.textContent = formatTime(timeLeft);
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    if (timeLeft <= 0) {
+                        timerLabel.textContent = "00:00";
+                        timerLabel.classList.add('danger');
+                        clearInterval(timerInterval);
+                        if (!quizSubmitted) {
+                            quizSubmitted = true;
+                            updateTimeTaken();
+                            quizForm.submit();
+                        }
+                        return;
                     }
+                    timerLabel.textContent = formatTime(timeLeft);
+                    if (timeLeft <= 60) {
+                        timerLabel.classList.add('danger');
+                    }
+                }, 1000);
+            }
+
+            function enterFullscreen() {
+                console.log("Attempting fullscreen");
+                const elem = document.documentElement;
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen().catch(err => {
+                        console.warn("Fullscreen blocked:", err);
+                        alert("Could not enter fullscreen. Please try again.");
+                    });
+                } else if (elem.webkitRequestFullscreen) {
+                    elem.webkitRequestFullscreen();
+                } else if (elem.msRequestFullscreen) {
+                    elem.msRequestFullscreen();
+                }
+            }
+
+            function isFullscreen() {
+                return document.fullscreenElement ||
+                    document.webkitFullscreenElement ||
+                    document.msFullscreenElement;
+            }
+
+            function showFsOverlay(show) {
+                if (!fsOverlay) return;
+                if (show) {
+                    fsOverlay.classList.remove('hidden');
+                    fsOverlay.style.display = 'flex';
+                } else {
+                    fsOverlay.classList.add('hidden');
+                    fsOverlay.style.display = 'none';
+                }
+            }
+
+            // ---------- fullscreen lock ----------
+            function handleFullscreenChange() {
+                if (!quizStarted || quizSubmitted) {
+                    if (fsWarning) fsWarning.classList.remove('visible');
+                    showFsOverlay(false);
                     return;
                 }
-                timerLabel.textContent = formatTime(timeLeft);
-                if (timeLeft <= 60) {
-                    timerLabel.classList.add('danger');
-                }
-            }, 1000);
-        }
-
-        function enterFullscreen() {
-            const elem = document.documentElement;
-            if (elem.requestFullscreen) {
-                elem.requestFullscreen();
-            } else if (elem.webkitRequestFullscreen) {
-                elem.webkitRequestFullscreen();
-            } else if (elem.msRequestFullscreen) {
-                elem.msRequestFullscreen();
-            }
-        }
-
-        function isFullscreen() {
-            return document.fullscreenElement ||
-                document.webkitFullscreenElement ||
-                document.msFullscreenElement;
-        }
-
-        function showFsOverlay(show) {
-            if (!fsOverlay) return;
-            if (show) {
-                fsOverlay.classList.remove('hidden');
-                fsOverlay.style.display = 'flex';
-            } else {
-                fsOverlay.classList.add('hidden');
-                fsOverlay.style.display = 'none';
-            }
-        }
-
-        // ---------- fullscreen lock ----------
-        function handleFullscreenChange() {
-            if (!quizStarted || quizSubmitted) {
-                if (fsWarning) fsWarning.classList.remove('visible');
-                showFsOverlay(false);
-                return;
-            }
-            if (!isFullscreen()) {
-                if (fsWarning) fsWarning.classList.add('visible');
-                showFsOverlay(true);
-            } else {
-                if (fsWarning) fsWarning.classList.remove('visible');
-                showFsOverlay(false);
-            }
-        }
-
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-
-        if (reenterFsBtn) {
-            reenterFsBtn.addEventListener('click', () => {
-                enterFullscreen();
-            });
-        }
-
-        function requireFullscreen(e) {
-            if (!quizStarted || quizSubmitted) return false;
-            if (!isFullscreen()) {
-                if (e) e.preventDefault();
-                if (fsWarning) fsWarning.classList.add('visible');
-                showFsOverlay(true);
-                return true;
-            }
-            return false;
-        }
-
-        // ---------- navigation ----------
-        if (prevBtn) {
-            prevBtn.addEventListener('click', (e) => {
-                if (requireFullscreen(e)) return;
-                if (currentIndex > 0) showQuestion(currentIndex - 1);
-            });
-        }
-
-        if (nextBtn) {
-            nextBtn.addEventListener('click', (e) => {
-                if (requireFullscreen(e)) return;
-                if (currentIndex < total - 1) showQuestion(currentIndex + 1);
-            });
-        }
-
-        dotButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                if (requireFullscreen(e)) return;
-                const idx = parseInt(btn.getAttribute('data-index'), 10);
-                if (!isNaN(idx)) {
-                    showQuestion(idx);
-                }
-            });
-        });
-
-        // ---------- form submit ----------
-        if (quizForm) {
-            quizForm.addEventListener('submit', function (e) {
-                if (quizSubmitted) return;
-                if (requireFullscreen(e)) return;
-
-                const ok = confirm("Are you sure you want to submit? You cannot change answers after this.");
-                if (!ok) {
-                    e.preventDefault();
+                if (!isFullscreen()) {
+                    if (fsWarning) fsWarning.classList.add('visible');
+                    showFsOverlay(true);
                 } else {
-                    quizSubmitted = true;
+                    if (fsWarning) fsWarning.classList.remove('visible');
+                    showFsOverlay(false);
                 }
-            });
-        }
+            }
 
-        // ---------- start quiz ----------
-        if (startQuizBtn) {
-            startQuizBtn.addEventListener('click', () => {
-                if (startOverlay) startOverlay.style.display = 'none';
-                enterFullscreen();
-                quizStarted = true;
-                showQuestion(0);
-                updateNavButtons();
-                startTimer();
-                handleFullscreenChange();
-            });
-        }
+            document.addEventListener('fullscreenchange', handleFullscreenChange);
 
-        // Hide questions until start
-        cards.forEach(c => c.classList.remove('active'));
-    })();
-</script>
+            if (reenterFsBtn) {
+                reenterFsBtn.addEventListener('click', () => {
+                    enterFullscreen();
+                });
+            }
+
+            function requireFullscreen(e) {
+                if (!quizStarted || quizSubmitted) return false;
+                if (!isFullscreen()) {
+                    console.log("Blocking action due to non-fullscreen");
+                    if (e) e.preventDefault();
+                    if (fsWarning) fsWarning.classList.add('visible');
+                    showFsOverlay(true);
+                    return true;
+                }
+                return false;
+            }
+
+            // ---------- navigation ----------
+            if (prevBtn) {
+                prevBtn.addEventListener('click', (e) => {
+                    if (requireFullscreen(e)) return;
+                    if (currentIndex > 0) showQuestion(currentIndex - 1);
+                });
+            }
+
+            if (nextBtn) {
+                nextBtn.addEventListener('click', (e) => {
+                    if (requireFullscreen(e)) return;
+                    if (currentIndex < total - 1) showQuestion(currentIndex + 1);
+                });
+            }
+
+            dotButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    if (requireFullscreen(e)) return;
+                    const idx = parseInt(btn.getAttribute('data-index'), 10);
+                    if (!isNaN(idx)) {
+                        showQuestion(idx);
+                    }
+                });
+            });
+
+            // ---------- form submit ----------
+            if (quizForm) {
+                quizForm.addEventListener('submit', function (e) {
+                    if (quizSubmitted) return;
+                    if (requireFullscreen(e)) return;
+
+                    // If triggered programmatically (timer end) quizSubmitted is already true
+                    // If user clicks, request confirm
+                    const ok = confirm("Are you sure you want to submit? You cannot change answers after this.");
+                    if (!ok) {
+                        e.preventDefault();
+                    } else {
+                        quizSubmitted = true;
+                        updateTimeTaken();
+                    }
+                });
+            }
+
+            // ---------- start quiz ----------
+            if (startQuizBtn) {
+                console.log("Start button found");
+                startQuizBtn.addEventListener('click', () => {
+                    console.log("Start button clicked");
+                    if (startOverlay) startOverlay.style.display = 'none';
+                    enterFullscreen();
+                    quizStarted = true;
+                    showQuestion(0);
+                    updateNavButtons();
+                    startTimer();
+                    handleFullscreenChange();
+                });
+            } else {
+                console.error("Start button NOT found");
+            }
+
+            // Hide questions until start
+            cards.forEach(c => c.classList.remove('active'));
+        })();
+    </script>
 
 </body>
 
