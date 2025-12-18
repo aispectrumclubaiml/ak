@@ -7,6 +7,8 @@ class Quiz(models.Model):
     duration_minutes = models.IntegerField(default=30)
     num_questions = models.IntegerField(default=20)
     description = models.TextField(blank=True, help_text="Short description shown on landing page")
+    is_active = models.BooleanField(default=True, help_text="If unchecked, users cannot start this quiz")
+    show_results = models.BooleanField(default=True, help_text="If unchecked, users only see submission confirmation (no score/details)")
 
     def __str__(self):
         return self.name

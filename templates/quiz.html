@@ -7,6 +7,11 @@
     <title>{{ quiz.name }} – Prelims</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <!-- Prevent caching -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
     <!-- Your global styles -->
     <link rel="stylesheet" href="{% static 'styles.css' %}">
     <link rel="shortcut icon" href="{% static 'fav.png' %}" type="image/x-icon">
@@ -324,8 +329,8 @@
         <div class="quiz-main">
             <form id="quizForm" method="post" action="{% url 'submit_quiz' quiz.id %}">
                 {% csrf_token %}
-                <input type="hidden" name="phone" value="{{ request.GET.phone }}">
-                <input type="hidden" name="event" value="{{ request.GET.event }}">
+                <input type="hidden" name="phone" value="{{ participant_phone }}">
+                <input type="hidden" name="event" value="{{ participant_event }}">
                 <input type="hidden" name="time_taken" id="timeTakenInput" value="0">
 
                 <!-- Questions (one visible at a time) -->

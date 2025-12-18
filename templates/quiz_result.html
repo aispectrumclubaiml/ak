@@ -7,11 +7,12 @@
     <title>{{ quiz.name }} – Result</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" href="{% static 'fav.png' %}" type="image/x-icon">
+
     <style>
         body {
             margin: 0;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-            background: radial-gradient(circle at top, #020617, #020617);
+            background: #020617;
             color: #e5e7eb;
             display: flex;
             align-items: center;
@@ -21,126 +22,228 @@
 
         .card {
             background: rgba(15, 23, 42, 0.95);
-            padding: 24px;
-            border-radius: 16px;
-            border: 1px solid rgba(148, 163, 184, 0.5);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-            max-width: 420px;
+            padding: 36px;
+            border-radius: 22px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            max-width: 620px;
+            /* increased width */
+            width: 94%;
             text-align: center;
         }
 
         h1 {
-            font-size: 22px;
-            margin-bottom: 8px;
+            font-size: 26px;
+            margin-bottom: 12px;
+            color: #f8fafc;
         }
 
         .score {
             font-size: 20px;
-            margin: 12px 0;
+            margin: 18px 0;
+            padding: 12px 18px;
+            background: rgba(59, 130, 246, 0.12);
+            border-radius: 14px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            display: inline-block;
         }
 
         .note {
+            font-size: 14px;
+            opacity: 0.75;
+            margin-top: 14px;
+            line-height: 1.6;
+        }
+
+        hr {
+            margin: 28px 0;
+            border: none;
+            border-top: 1px solid rgba(148, 163, 184, 0.15);
+        }
+
+        /* Feedback */
+        .feedback-section {
+            text-align: left;
+        }
+
+        .feedback-label {
             font-size: 13px;
-            opacity: 0.85;
+            color: #94a3b8;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .rating-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 22px;
+        }
+
+        .rating-group label {
+            flex: 1;
+            text-align: center;
+            padding: 10px 0;
+            background: rgba(30, 41, 59, 0.6);
+            border-radius: 10px;
+            cursor: pointer;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            color: #cbd5e1;
+            transition: 0.2s;
+            font-weight: 500;
+        }
+
+        .rating-group input {
+            display: none;
+        }
+
+        .rating-group label:has(input:checked) {
+            background: #3b82f6;
+            color: #fff;
+            border-color: #3b82f6;
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.45);
+            transform: translateY(-2px);
+        }
+
+        textarea {
+            width: 100%;
+            padding: 14px;
+            border-radius: 14px;
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            color: white;
+            resize: vertical;
+            margin-bottom: 22px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        /* Answer breakdown */
+        .answers {
+            text-align: left;
+            font-size: 14px;
+            max-height: 360px;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+
+        .answer-box {
+            padding-bottom: 14px;
+            margin-bottom: 14px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+        }
+
+        .correct {
+            color: #4ade80;
+            font-weight: 600;
+        }
+
+        .wrong {
+            color: #f87171;
+            font-weight: 600;
         }
     </style>
 </head>
 
 <body>
     <div class="card">
+
         <h1>{{ quiz.name }} – Submitted</h1>
-        {% if score is not None %}
-        <p class="score">
-            Your score: <strong>{{ score }}</strong> / {{ total }}
-        </p>
+
+        {% if show_results and score is not None %}
+        <div class="score">
+            Your Score: <strong>{{ score }}</strong> / {{ total }}
+        </div>
         {% else %}
-        <p>Your responses have been recorded.</p>
+        <p class="note">Your responses have been recorded successfully.</p>
         {% endif %}
+
         <p class="note">
-            You may now inform the invigilator. If there is any issue with your submission,
-            please contact the event coordinator.
+            You may now inform the invigilator.
+            If there is any issue, please contact the event coordinator.
         </p>
 
         {% if not feedback_submitted and submission_id %}
-        <hr style="margin:20px 0; border-color: rgba(148,163,184,0.4);">
+        <hr>
         <div class="feedback-section">
-            <h3 style="font-size:18px; margin-bottom:12px;">Feedback</h3>
-            <form action="{% url 'submit_feedback' %}" method="post">
+            <h3>Feedback</h3>
+
+            <form method="post" action="{% url 'submit_feedback' %}">
                 {% csrf_token %}
                 <input type="hidden" name="submission_id" value="{{ submission_id }}">
 
-                <!-- 1. Overall Experience -->
-                <div style="margin-bottom:12px;">
-                    <label style="display:block; margin-bottom:6px; font-size:14px;">Overall Experience (1-5)</label>
-                    <div style="display:flex; justify-content:center; gap:8px;">
-                        {% for i in "12345" %}
-                        <label><input type="radio" name="rating" value="{{ i }}" required> {{ i }}</label>
-                        {% endfor %}
-                    </div>
+                <span class="feedback-label">Overall Experience</span>
+                <div class="rating-group">
+                    {% for i in "12345" %}
+                    <label><input type="radio" name="rating" value="{{ i }}" required> {{ i }}</label>
+                    {% endfor %}
                 </div>
 
-                <!-- 2. UI/UX -->
-                <div style="margin-bottom:12px;">
-                    <label style="display:block; margin-bottom:6px; font-size:14px;">Platform UI/UX (1-5)</label>
-                    <div style="display:flex; justify-content:center; gap:8px;">
-                        {% for i in "12345" %}
-                        <label><input type="radio" name="rating_ui" value="{{ i }}" required> {{ i }}</label>
-                        {% endfor %}
-                    </div>
+                <span class="feedback-label">Platform UI/UX</span>
+                <div class="rating-group">
+                    {% for i in "12345" %}
+                    <label><input type="radio" name="rating_ui" value="{{ i }}" required> {{ i }}</label>
+                    {% endfor %}
                 </div>
 
-                <!-- 3. Question Difficulty -->
-                <div style="margin-bottom:12px;">
-                    <label style="display:block; margin-bottom:6px; font-size:14px;">Question Difficulty (1-5)</label>
-                    <div style="display:flex; justify-content:center; gap:8px;">
-                        {% for i in "12345" %}
-                        <label><input type="radio" name="rating_difficulty" value="{{ i }}" required> {{ i }}</label>
-                        {% endfor %}
-                    </div>
+                <span class="feedback-label">Question Difficulty</span>
+                <div class="rating-group">
+                    {% for i in "12345" %}
+                    <label><input type="radio" name="rating_difficulty" value="{{ i }}" required> {{ i }}</label>
+                    {% endfor %}
                 </div>
 
-                <!-- 4. Question Relevance -->
-                <div style="margin-bottom:12px;">
-                    <label style="display:block; margin-bottom:6px; font-size:14px;">Question Relevance (1-5)</label>
-                    <div style="display:flex; justify-content:center; gap:8px;">
-                        {% for i in "12345" %}
-                        <label><input type="radio" name="rating_relevance" value="{{ i }}" required> {{ i }}</label>
-                        {% endfor %}
-                    </div>
+                <span class="feedback-label">Question Relevance</span>
+                <div class="rating-group">
+                    {% for i in "12345" %}
+                    <label><input type="radio" name="rating_relevance" value="{{ i }}" required> {{ i }}</label>
+                    {% endfor %}
                 </div>
 
-                <div style="margin-bottom:12px;">
-                    <textarea name="comments" rows="3" placeholder="Any comments or suggestions?"
-                        style="width:100%; padding:8px; border-radius:8px; background:rgba(2,6,23,0.5); border:1px solid rgba(148,163,184,0.4); color:white; font-family:inherit; box-sizing:border-box;"></textarea>
-                </div>
+                <textarea name="comments" rows="3" placeholder="Any comments or suggestions?"></textarea>
 
-                <button type="submit"
-                    style="padding:8px 16px; background:#3b82f6; color:white; border:none; border-radius:99px; cursor:pointer; font-weight:600;">
-                    Submit Feedback
-                </button>
+                <button class="btn-submit">Submit Feedback</button>
             </form>
         </div>
-        {% elif feedback_submitted %}
-        <div
-            style="margin-top:20px; padding:12px; background:rgba(34,197,94,0.2); border-radius:12px; border:1px solid rgba(34,197,94,0.5);">
-            Thank you for your feedback!
-            <div style="margin-top:12px;">
-                <a href="{% url 'prelims_entry' %}"
-                    style="display:inline-block; padding:8px 16px; background:#3b82f6; color:white; text-decoration:none; border-radius:99px; font-weight:600; font-size:14px;">Back
-                    to Home</a>
-            </div>
-        </div>
         {% endif %}
-        {% if details %}
-        <hr style="margin:16px 0; border-color: rgba(148,163,184,0.4);">
-        <div style="text-align:left; font-size:13px; max-height:260px; overflow:auto;">
-            <p><strong>Debug: Answer Breakdown</strong></p>
+
+        {% if show_results and details %}
+        <hr>
+        <div class="answers">
+            <strong>Answer Breakdown</strong><br><br>
+
             {% for d in details %}
-            <div style="margin-bottom:8px;">
-                <div><strong>Q{{ forloop.counter }} (ID {{ d.question.id }}):</strong></div>
-                <div>Selected: {{ d.selected_letter }} — {{ d.selected_text|default:"(no answer)" }}</div>
-                <div>Correct: {{ d.correct_letter }} — {{ d.correct_text }}</div>
-                <div>Is correct? <strong>{{ d.is_correct }}</strong></div>
+            <div class="answer-box">
+                <strong>Q{{ forloop.counter }} (ID {{ d.question.id }})</strong><br>
+
+                Selected:
+                <strong>{{ d.selected_letter }}</strong> —
+                {{ d.selected_text|default:"(no answer)" }}<br>
+
+                Correct:
+                <strong class="correct">{{ d.correct_letter }}</strong> —
+                {{ d.correct_text }}<br>
+
+                {% if d.is_correct %}
+                <span class="correct">✔ Correct</span>
+                {% else %}
+                <span class="wrong">✖ Incorrect</span>
+                {% endif %}
             </div>
             {% endfor %}
         </div>

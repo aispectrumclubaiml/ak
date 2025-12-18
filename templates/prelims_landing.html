@@ -22,13 +22,15 @@
 
     <div class="container">
         <div class="glass-card">
+
             <div class="badge">
                 <div class="badge-dot"></div>
                 AI KSHETRA 2025 · PRELIMS
             </div>
 
             {% if step == 1 %}
-            {# ---------------- STEP 1: EVENT + PHONE FORM ---------------- #}
+            <!-- ================= STEP 1 ================= -->
+
             <div class="title-row">
                 <div class="title-main">
                     Choose Your <span>Battlefield</span>
@@ -44,29 +46,42 @@
                 <div class="steps-line"></div>
             </div>
 
-            <form id="prelims-form" method="post" action="">
+            <form id="prelims-form" method="post">
                 {% csrf_token %}
 
                 <div class="event-grid" id="event-grid">
                     {% for quiz in quizzes %}
-                    <label class="event-card" data-event-id="quiz-{{ quiz.id }}">
-                        <!-- Use quiz.id as the value -->
-                        <input class="event-radio" type="radio" name="event" value="{{ quiz.id }}" />
+                    <label class="event-card{% if not quiz.is_active %} inactive{% endif %}"
+                        data-event-id="quiz-{{ quiz.id }}">
+
+                        <input class="event-radio" type="radio" name="event" value="{{ quiz.id }}">
+
                         <div class="event-pill">
                             <div class="event-pill-inner"></div>
                         </div>
+
                         <div>
-                            <div class="event-content-title">{{ quiz.name }}</div>
+                            <div class="event-content-title">
+                                {{ quiz.name }}
+                                {% if not quiz.is_active %}
+                                <span style="font-size:11px; background:#475569; padding:2px 6px;
+                         border-radius:4px; margin-left:6px;">
+                                    Inactive
+                                </span>
+                                {% endif %}
+                            </div>
+
                             <div class="event-content-sub">
                                 {{ quiz.description|default:"No description available." }}
                             </div>
                         </div>
                     </label>
                     {% empty %}
-                    <div style="grid-column: 1/-1; text-align: center; opacity: 0.7;">
+                    <div style="grid-column:1/-1; text-align:center; opacity:.7;">
                         No active quizzes found. Please contact admin.
                     </div>
                     {% endfor %}
+
                 </div>
 
                 <!-- Phone section -->
@@ -75,11 +90,13 @@
                         Participant Phone
                         <span>(Given at the time of Registration)</span>
                     </div>
+
                     <div class="input-wrap">
                         <div class="input-prefix">+91</div>
                         <input type="tel" id="phone" name="phone" class="input" maxlength="10"
                             placeholder="Enter 10-digit mobile number" inputmode="numeric" autocomplete="tel" />
                     </div>
+
                     <div class="error-text {% if error %}visible{% endif %}" id="error-text">
                         {{ error }}
                     </div>
@@ -98,14 +115,15 @@
             </form>
 
             {% else %}
-            {# ---------------- STEP 2: CONFIRMATION + RULES ---------------- #}
+            <!-- ================= STEP 2 ================= -->
+
             <div class="title-row">
                 <div class="title-main">
                     Confirm Your <span>Squad</span>
                 </div>
                 <p class="subtitle">
-                    We fetched your registration details from the college server. Please verify them
-                    and read the rules before starting the prelims.
+                    We fetched your registration details from the college server.
+                    Please verify them and read the rules before starting.
                 </p>
             </div>
 
@@ -118,7 +136,7 @@
                 <h3>Participant Details</h3>
 
                 {% if api_error %}
-                <p style="color:#f97373; font-size:13px; margin-bottom:8px;">
+                <p style="color:#f97373; font-size:13px;">
                     {{ api_error }}
                 </p>
                 {% endif %}
@@ -132,23 +150,23 @@
             <div class="rules-block">
                 <h3>Rules & Guidelines</h3>
                 <ul class="rules-list">
-                    <li>Only the registered team leader should operate the system during prelims.</li>
-                    <li>Do not refresh or go back during the quiz once started.</li>
-                    <li>Any malpractice or multiple logins may lead to disqualification.</li>
-                    <li>Time will start as soon as you enter the prelims environment.</li>
+                    <li>Only the registered team leader should operate the system.</li>
+                    <li>Do not refresh or go back once the quiz starts.</li>
+                    <li>Multiple logins or malpractice leads to disqualification.</li>
+                    <li>Timer starts immediately after entry.</li>
                 </ul>
             </div>
 
             <div class="bottom-row">
                 <p class="note-text">
-                    By clicking <strong>Start Prelims</strong>, you confirm that the above details are correct and you
-                    agree to the rules.
+                    By clicking <strong>Start Prelims</strong>, you agree to the rules.
                 </p>
                 <button class="btn-primary" id="start-prelims-btn">
                     <span>Start Prelims</span>
                     <span class="icon">⟶</span>
                 </button>
             </div>
+
             {% endif %}
 
             <div class="toast" id="toast">
@@ -158,8 +176,8 @@
 
             <script>
                 (function () {
+
                     {% if step == 1 %}
-                    // STEP 1 JS
                     const eventCards = document.querySelectorAll(".event-card");
                     const phoneInput = document.getElementById("phone");
                     const errorText = document.getElementById("error-text");
@@ -167,29 +185,27 @@
                     const toast = document.getElementById("toast");
                     const toastText = document.getElementById("toast-text");
 
-                    let selectedEvent = null;
-
-                    function showToast(message) {
-                        toastText.textContent = message;
+                    function showToast(msg) {
+                        toastText.textContent = msg;
                         toast.classList.add("visible");
-                        setTimeout(() => {
-                            toast.classList.remove("visible");
-                        }, 2500);
+                        setTimeout(() => toast.classList.remove("visible"), 2500);
                     }
 
                     function validatePhone(phone) {
-                        const digitsOnly = phone.replace(/\D/g, "");
-                        return digitsOnly.length === 10 && /^([6-9]\d{9})$/.test(digitsOnly);
+                        return /^[6-9]\d{9}$/.test(phone);
                     }
 
                     eventCards.forEach(card => {
                         card.addEventListener("click", () => {
+                            if (card.classList.contains("inactive")) {
+                                showToast("This event is not active yet.");
+                                return;
+                            }
+
                             eventCards.forEach(c => c.classList.remove("selected"));
                             card.classList.add("selected");
 
-                            const radio = card.querySelector(".event-radio");
-                            radio.checked = true;
-                            selectedEvent = radio.value;
+                            card.querySelector(".event-radio").checked = true;
                         });
                     });
 
@@ -198,42 +214,40 @@
                         errorText.classList.remove("visible");
                     });
 
-                    form.addEventListener("submit", (e) => {
+                    form.addEventListener("submit", e => {
                         const phone = phoneInput.value.trim();
-                        const anySelected = Array.from(document.querySelectorAll(".event-radio"))
+                        const anySelected = [...document.querySelectorAll(".event-radio")]
                             .some(r => r.checked);
 
                         if (!anySelected) {
                             e.preventDefault();
-                            showToast("Please select an event to continue.");
+                            showToast("Please select an event.");
                             return;
                         }
 
                         if (!validatePhone(phone)) {
                             e.preventDefault();
-                            errorText.textContent = "Enter a valid 10-digit Indian mobile number starting with 6-9.";
+                            errorText.textContent = "Enter valid 10-digit mobile number.";
                             errorText.classList.add("visible");
                             phoneInput.focus();
-                            return;
                         }
-                        // Normal POST to Django view
                     });
+
                     {% else %}
-                    // STEP 2 JS
                     const startBtn = document.getElementById("start-prelims-btn");
                     if (startBtn) {
                         startBtn.addEventListener("click", () => {
                             const phone = "{{ phone }}";
-                            const eventCode = "{{ event_code }}";  // "3" or "4" – also quiz id
-                            const params = new URLSearchParams({ phone: phone, event: eventCode });
-
-                            // use selected event as quiz id
-                            window.location.href = "/quiz/" + encodeURIComponent(eventCode) + "/?" + params.toString();
+                            const eventCode = "{{ event_code }}";
+                            const params = new URLSearchParams({ phone, event: eventCode });
+                            window.location.href = `/quiz/${eventCode}/?${params.toString()}`;
                         });
                     }
                     {% endif %}
+
                 })();
             </script>
+
         </div>
     </div>
 </body>
